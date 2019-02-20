@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="SerialNumber" script:language="StarBasic">REM  *****  BASIC  *****
+
+&apos; EntryPoint:
+&apos; CreateSerialNumber
+
+&apos; Create a square bitmap in Draw and name it &quot;qr_serial&quot;
+
+option explicit
+&apos;-------------------------------------------
+Dim bCRC32Init As Boolean
+Dim nCRC32LookUp() As Long
+Dim computerId as String
+
+&apos;-------------------------------------------
+function GetOsType()
+  dim gt
+  gt = GetGuiType
+  select case gt
+    case 1:
+      GetOsType = &quot;Windows&quot;
+    case 3:
+      GetOsType = &quot;MacOS&quot;
+    case 4:
+      GetOsType = &quot;Linux&quot;
+    case else
+      GetOsType = &quot;Unknown&quot;
+  end select
+end function
+
+
+&apos;-------------------------------------------
+sub CreateDocProps
+  CreateDocProp(&quot;SerialNumber&quot;)
+  CreateDocProp(&quot;Version&quot;)
+  CreateDocProp(&quot;Hash&quot;)
+end sub
+
+sub CreateDocProp(name$)
+  dim oInfo
+  oInfo = ThisComponent.getDocumentProperties().UserDefinedProperties
+  on error goto notfound
+  oInfo.getPropertyValue(name)
+  exit sub
+notfound:
+  oInfo.addProperty(name, 0, &quot;&quot;)  
+
+end sub
+
+&apos;-------------------------------------------
+function GetLoDirName$
+  dim dir$
+  select case GetOsType
+    case &quot;Windows&quot;:
+      dir = environ(&quot;APPDATA&quot;)
+    case &quot;Linux&quot;
+      dir = environ(&quot;HOME&quot;) &amp; &quot;/.config&quot;
+    case else
+      dir = environ(&quot;HOME&quot;) &amp; &quot;/.config&quot;
+  end select
+  if not FileExists(dir) then
+    MkDir(dir)
+  endif
+  dir = ConvertToUrl(dir) &amp; &quot;/libreoffice&quot;
+  if not FileExists(dir) then
+    MkDir(dir)
+  endif
+  GetLoDirName = dir
+end function
+
+function GetSerialNumberDirName$
+  dim dir$
+  dir = GetLoDirName &amp; &quot;/SerialNumbers&quot;
+  if not FileExists(dir) then
+    MkDir(dir)
+  endif
+  GetSerialNumberDirName = dir
+end function
+
+sub CreateSerialNumber
+  dim version as string
+  
+  CreateDocProps()
+  
+  version = GetVersion
+  
+  if version = &quot;&quot; then
+    msgBox &quot;Dokumentversion wurde nicht gefunden!&quot;, 16, &quot;Seriennummer erstellen&quot;
+    exit sub
+  endif
+  
+  &apos;----------------------------
+  dim oPathSubst
+  dim serialFileName as string
+  dim computerIdFilename$ as string
+  
+  serialFileName = GetSerialNumberDirName &amp; &quot;/&quot; &amp; version
+  computerIdFilename$ = GetLoDirName &amp; &quot;/computerid&quot;
+  
+  &apos;-----------------------------  
+  dim sn as integer, iNum as Integer
+  if FileExists(serialFileName) then
+    dim sLine as string
+    On Error Goto ErrorReadFile
+    iNum = FreeFile
+    Open serialFileName for input access read as #iNum
+    line input #iNum, sLine
+    close #iNum
+    On Error Goto 0
+    if IsNumeric(sLine) then
+      sn = CInt(sLine)
+    else
+      sn = -2
+    endif
+  else
+    sn = 0
+  endif
+  sn = sn + 1
+  
+  on Error Goto ErrorWriteFile
+  iNum = FreeFile
+  Open serialFileName for output as #iNum
+  print #iNum, sn
+  close #iNum
+  On Error Goto 0
+  
+  &apos;-----------------------------
+  if FileExists(computerIdFileName) then
+    On Error Goto ErrorReadIdFile
+    iNum = FreeFile
+    Open computerIdFilename for input access read as #iNum
+    line input #iNum, sLine
+    close #iNum
+    On Error Goto 0
+    computerId = sLine
+  else
+	  on Error Goto ErrorWriteIdFile
+	  computerId = UUIDv4
+	  iNum = FreeFile
+	  Open computerIdFilename for output as #iNum
+	  print #iNum, computerId
+	  close #iNum
+	  On Error Goto 0
+  endif
+  
+  &apos;-----------------------------
+  SetHash()
+  SetSerial(sn)
+  SetQr()
+  
+  &apos;-----------------------------
+  exit sub
+ErrorCreateDir:
+  MsgBox &quot;Das Verzeichnis &apos;&quot; &amp; serialFileName &amp; &quot;&apos; konnte nicht erstellt werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+  exit sub
+ErrorWriteFile:
+  MsgBox &quot;Die Datei &apos;&quot; &amp; serialFileName &amp; &quot;&apos; konnte nicht geschrieben werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+  exit sub
+ErrorWriteIdFile:
+  MsgBox &quot;Die Datei &apos;&quot; &amp; computerIdFilename &amp; &quot;&apos; konnte nicht geschrieben werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+  exit sub
+ErrorReadFile:
+  MsgBox &quot;Die Datei &apos;&quot; &amp; serialFileName &amp; &quot;&apos; konnte nicht gelesen werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+  exit sub
+ErrorReadIdFile:
+  MsgBox &quot;Die Datei &apos;&quot; &amp; computerIdFilename &amp; &quot;&apos; konnte nicht gelesen werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+  exit sub
+end sub
+
+sub SetQr
+  dim oInfo, oProps
+  dim version$, hash$, serial$, i as integer
+  oInfo = ThisComponent.getDocumentProperties().UserDefinedProperties
+  oProps = oInfo.getPropertyValues()
+  
+  &apos; get document information
+  for i = 0 to UBound(oProps)
+    if oProps(i).Name = &quot;Version&quot; then version = oProps(i).Value
+    if oProps(i).Name = &quot;Hash&quot; then hash = oProps(i).Value
+    if oProps(i).Name = &quot;SerialNumber&quot; then serial = oProps(i).Value
+  next i
+  
+  &apos; create qr-code-genarator URL
+  dim qrData$, apiUrl$
+  qrData = version &amp; &quot;.&quot; &amp; hash &amp; &quot;.&quot; &amp; serial
+  apiUrl = &quot;http://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;ecc=M&amp;data=&quot; &amp; qrData
+  
+  &apos; find qr-code shape
+  dim qr, dpa, dpi
+  qr = null
+  dpa = GetDrawPages()
+  for dpi = 0 to UBound(dpa)
+    for i = 0 to dpa(dpi).Count - 1
+      dim o
+	  on err goto nextI
+      o = dpa(dpi).getByIndex(i)
+      if o.Name = &quot;qr_serial&quot; then
+        qr = o
+        exit for
+      end if
+nextI:
+    next i
+    if not IsNull(qr) then exit for
+  next dpi
+  if IsNull(qr) then exit sub
+  
+  &apos; set embedded image from URL
+  dim props(0) As New com.sun.star.beans.PropertyValue, gp As Object, p as Object
+  gp = createUnoservice(&quot;com.sun.star.graphic.GraphicProvider&quot;)
+  props(0).Name = &quot;URL&quot;
+  props(0).Value = apiUrl
+  p = gp.queryGraphic(props())
+  if not IsNull(p) then
+    qr.GraphicUrl = &quot;&quot;
+    qr.Graphic = p
+    qr.Transparency = 0
+  else
+    qr.Transparency = 100
+  end if
+end sub
+
+function GetDrawPages()
+  if ThisComponent.supportsService(&quot;com.sun.star.text.GenericTextDocument&quot;) then
+    dim dpt(0)
+    dpt(0) = ThisComponent.DrawPage
+    GetDrawPages = dpt
+  elseif ThisComponent.SupportsService(&quot;com.sun.star.sheet.SpreadsheetDocument&quot;) or ThisComponent.SupportsService(&quot;com.sun.star.drawing.GenericDrawingDocument&quot;) then
+    dim dpcount
+    dpcount = ThisComponent.DrawPages.Count
+    dim dpc(dpcount - 1), i%
+    for i = 0 to dpcount - 1
+      dpc(i) = ThisComponent.DrawPages(i)
+    next i
+    GetDrawPages = dpc
+  end if
+end function
+
+function GetVersion
+  dim oInfo, i as integer, sName, version, oProps
+  dim vName as string
+  vName = &quot;Version&quot;
+  oInfo = ThisComponent.getDocumentProperties().UserDefinedProperties
+  oProps = oInfo.getPropertyValues()
+  version = &quot;&quot;
+  for i = 0 to UBound(oProps)
+    if (oProps(i).Name = vName) then
+      version = oProps(i).Value
+      if version = &quot;&quot; then
+        version = &quot;V.&quot; &amp; GetDateString
+        oInfo.setPropertyValue(vName, version)
+      endif
+      exit for
+    endif
+  next &apos;i
+  GetVersion = version
+end function
+
+&apos;------------------------------------------------
+sub SetSerial(sn as integer)
+  dim oInfo, sName, i as integer
+  dim snName as string
+  snName = &quot;SerialNumber&quot;
+  
+  on error goto err
+  
+  oInfo = ThisComponent.getDocumentProperties.UserDefinedProperties
+  oInfo.setPropertyValue(snName, trim(str(sn)))
+  exit sub
+  
+err:
+  on error goto 0
+  MsgBox &quot;Das Info-Feld &apos;&quot; &amp; snName &amp; &quot;&apos; konnte nicht gefunden werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+end sub
+
+&apos;--------------------------------------------------
+function GetCrcSource() as string
+  dim sComputer as string, sUser as String, sDomain as string
+  dim GuiType as integer
+  GuiType = GetGuiType()
+  
+  select case GuiType
+    case 1 &apos; Windows
+      sComputer$ = environ(&quot;COMPUTERNAME&quot;)
+      sUser = environ(&quot;USERNAME&quot;)
+      sDomain = environ(&quot;USERDOMAIN&quot;)
+    &apos;case 3 &apos;MAC OS
+    case 4 &apos;Linux
+      sComputer$ = environ(&quot;HOSTNAME&quot;)
+      sUser = environ(&quot;USER&quot;)
+      sDomain = &quot;&quot;
+    case else
+      sComputer$ = &quot;C&quot;
+      sUser = &quot;U&quot;
+      sDomain = &quot;D&quot;
+  end select
+  GetCrcSource =  sUser &amp; sComputer &amp; sDomain &amp; computerId
+end function
+
+&apos;--------------------------------------------------
+sub SetHash()
+  dim sCrcSource as string, crc as long
+  
+  sCrcSource = GetCrcSource()
+  crc = crc32(strconv(sCrcSource, 128))
+  
+  dim oInfo, sName, crcName as string, i as integer
+  crcName = &quot;Hash&quot;
+
+  on error goto err
+  
+  oInfo = ThisComponent.getDocumentProperties.UserDefinedProperties
+  oInfo.setPropertyValue(crcName, Hex$(crc))
+  exit sub
+
+err:
+  MsgBox &quot;Das Info-Feld &apos;&quot; &amp; crcName &amp; &quot;&apos; konnte nicht gefunden werden!&quot;, _
+    16, &quot;Seriennummer erstellen&quot;
+end sub
+
+&apos;--------------------------------------------------
+function GetDateString
+  dim dt, y, m, d
+  dt = Date
+  y = Year(dt)
+  m = Month(dt)
+  d = Day(dt)
+  if m &lt; 10 then m = &quot;0&quot; &amp; m
+  if d &lt; 10 then d = &quot;0&quot; &amp; d
+  GetDateString = y &amp; m &amp; d
+end function
+
+&apos;--------------------------------------------------
+Public Sub CRC32_Init()
+  &apos; Polynom-Tabelle erstellen
+  &apos; Hier wird das offizielle Polynom verwendet, das
+  &apos; auch von WinZip/PKZip verwendet wird
+ 
+  &apos; Falls die LookUp-Tabelle bereits erstellt...
+  If bCRC32Init Then Exit Sub
+ 
+  Dim nPolynom&amp;, nM2
+  nPolynom = -306674912 &apos;&amp;HEDB88320
+  nM2 = -2 &apos;&amp;HFFFFFFFE
+  
+ 
+  Dim i As Long
+  Dim u As Long
+ 
+  ReDim nCRC32LookUp(255)
+  Dim nCRC32 As Long
+ 
+  For i = 0 To 255
+    nCRC32 = i
+    For u = 0 To 7
+      If (nCRC32 And 1) Then
+        nCRC32 = (((nCRC32 And nM2) \ 2&amp;) And &amp;H7FFFFFFF) _
+          Xor nPolynom
+      Else
+        nCRC32 = ((nCRC32 And nM2) \ 2&amp;) And &amp;H7FFFFFFF
+      End If
+    Next u
+    nCRC32LookUp(i) = nCRC32
+  Next i
+  bCRC32Init = True
+End Sub
+
+&apos;--------------------------------------------------
+Public Function CRC32(ByRef Bytes() As Byte) As Long
+ 
+  Dim i As Long
+  Dim Index As Long
+  Dim nSize As Long
+  dim nResult as long
+  dim nM256&amp;
+  
+  nM256 = -256 &apos;&amp;HFFFFFF00
+ 
+  nresult = -1 &apos;&amp;HFFFFFFFF
+  
+  &apos; ggf. LookUp-Tabelle erstellen...
+  If Not bCRC32Init Then CRC32_Init
+ 
+  nSize = UBound(Bytes)
+  For i = 0 To nSize
+    Index = (nResult And &amp;HFF) Xor Bytes(i)
+    nResult = (((nResult And nM256) \ &amp;H100) And 16777215) _
+      Xor nCRC32LookUp(Index)
+  Next i
+ 
+  CRC32 = Not (nResult)
+End Function
+
+</script:module>

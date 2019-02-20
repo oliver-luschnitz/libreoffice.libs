@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Standard" script:language="StarBasic">REM  *****  BASIC  *****
+&apos;----------------------------------------------------------------------------
+&apos; Modul mit Makros, die in die Standard-bibliothek eines Dokumentes kopiert
+&apos; werden sollte.
+&apos;----------------------------------------------------------------------------
+Option Explicit
+
+&apos;----------------------------------------------------------------------------
+&apos;Lädt die bibliothek mit dem angegebenen Namen
+Sub LoadLib(strName as string)
+  If NOT BasicLibraries.isLibraryLoaded(strName) Then
+    BasicLibraries.LoadLibrary(strName)
+  End If
+End sub
+
+
+</script:module>

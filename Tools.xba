@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Tools" script:language="StarBasic">REM  *****  BASIC  *****
+&apos;----------------------------------------------------------------------------
+&apos; Dieses Modul enthält diverse Hilfs-Makros
+&apos;----------------------------------------------------------------------------
+option explicit
+
+&apos;----------------------------------------------------------------------------
+&apos; Erzeugt eine UUID der Version 4 (zufällige UUID)
+Function UUIDv4() As String
+   Dim i As integer
+   
+   UUIDv4 = &quot;&quot;
+   
+   &apos; 8 Hex-Ziffern
+   for i = 1 to 8
+      UUIDv4 = UUIDv4 &amp; LCase(hex(int(rnd()*16)))
+   next i
+   
+   &apos; &quot;-&quot; und 4 Hex-Ziffern
+   UUIDv4 = UUIDv4 &amp; &quot;-&quot;
+   for i = 1 to 4
+      UUIDv4 = UUIDv4 &amp; LCase(hex(int(rnd()*16)))
+   next i
+
+   &apos; &quot;-&quot;, Versionsnummer &quot;4&quot; und 3 Hex-Ziffern
+   UUIDv4 = UUIDv4 &amp; &quot;-4&quot;
+   for i = 1 to 3
+      UUIDv4 = UUIDv4 &amp; LCase(hex(int(rnd()*16)))
+   next i
+   
+   &apos; &quot;-&quot;, 1 Hex-Ziffer zwischen 8 und C und 3 Hex-Ziffern
+   UUIDv4 = UUIDv4 &amp; &quot;-&quot;
+   UUIDv4 = UUIDv4 &amp; LCase(hex((int(rnd()*4))+8))
+   for i = 1 to 3
+      UUIDv4 = UUIDv4 &amp; LCase(hex(int(rnd()*16)))
+   next i
+   
+   &apos; &quot;-&quot; und 12 Hex-Ziffern
+   UUIDv4 = UUIDv4 &amp; &quot;-&quot;
+   for i = 1 to 12
+      UUIDv4 = UUIDv4 &amp; LCase(hex(int(rnd()*16)))
+   next i
+End Function
+
+&apos;----------------------------------------------------------------------------
+&apos; Formatiert einen String: Die Objekte im Array aValues werden in den Format-
+&apos; string strFormat eingefügt. Platzhalter ist der index im Array, der von
+&apos; geschweiften Klammern umschlossen ist. (Ähnlich zur string.Format() in C#
+function StringFormat$(strFormat$, aValues())
+  dim i, result$
+  result = strFormat
+  for i = LBound(aValues) to UBound(aValues)
+    result = Replace(result, &quot;{&quot; &amp; i &amp; &quot;}&quot;, aValues(i))
+  next &apos;i
+  StringFormat() = result
+end function
+
+&apos;----------------------------------------------------------------------------
+
+</script:module>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Document" script:language="StarBasic">REM  *****  BASIC  *****
+&apos;----------------------------------------------------------------------------
+&apos; Dieses Modul enthält Makros, die sich auf die Manipulation von Dokumenten
+&apos; im Allgemeinen beziehen, unabhängig ob Writer, Calc, ...
+&apos; und passende Hilfsfunktionen
+&apos;----------------------------------------------------------------------------
+Option Explicit
+
+&apos;----------------------------------------------------------------------------
+&apos; Erzeugt eine Text der Art &apos;Erstellt am {DATUM} um {ZEIT}&apos;
+Function CreateDocumentTitle$
+  CreateDocumentTitle() = Tools.StringFormat(&quot;Created on: {0} at {1}&quot;, _
+    Array(format(Date, &quot;YYYY-MM-DD&quot;), Format(Time, &quot; HH:MM:SS&quot;)))
+End Function
+
+&apos;----------------------------------------------------------------------------
+&apos; Setzt den Titel des aktuellen Dokumentes auf den übergebenen Text
+Sub SetDocumentTitle(strTitle$)
+  On Error Goto errorHandler
+  dim docProps
+  docProps = thisComponent.getDocumentProperties()
+  docProps.Title = strTitle
+  
+  On Error resume next
+  thisComponent.Textfields.refresh
+  
+  On Error Goto 0
+  Exit Sub
+
+errorHandler:
+  On Error Goto 0
+  MsgBox(&quot;The document does not support document-properties!&quot;, 16, &quot;Document.SetDocumentTitle&quot;)
+End Sub
+
+&apos;----------------------------------------------------------------------------
+&apos; Ereignisbehandlung für &apos;Dokument erstellt&apos;
+&apos; Setzt den automatisch erzeugten Titel des Dokumentes
+Sub Document_New
+  Document.SetDocumentTitle(Document.CreateDocumentTitle())
+End Sub
+
+&apos;----------------------------------------------------------------------------
+&apos; Ereignisbehandlung für &apos;Dokument erstellt&apos;
+&apos; Fragt nach einem Dokument-Titel. Ist dieser leer, wird einer automatisch
+&apos; erstellt
+Sub Document_New_Ask
+  dim newtitle$
+  newtitle = InputBox(&quot;Worum wird es in diesem Dokument gehen?&quot;, &quot;Austin Padernale&quot;)
+  if newtitle = &quot;&quot; then newtitle = Document.CreateDocumentTitle()
+  Document.SetDocumentTitle(newtitle)
+End Sub
+
+</script:module>

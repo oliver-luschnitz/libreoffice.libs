@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="FilesAndFolders" script:language="StarBasic">REM  *****  BASIC  *****
+&apos;----------------------------------------------------------------------------
+&apos; Modul mit Makros, die mit Dateien und Verzeichnissen im Allgemeinen zu tun
+&apos; haben: Datei-Auswahl, Verzeichnis-Auswahl, Verzeichnis-Ermittlung
+&apos;----------------------------------------------------------------------------
+Option Explicit
+Option Compatible
+
+&apos;----------------------------------------------------------------------------
+&apos; Liefert zu einem Pfad-Namen die passende URL
+&apos; z.B.: inst, prog, user, work, home, temp, path
+&apos; aber auch: lang, langid, vlang
+Function GetSystemDir(strPathName$) As String
+  Dim  oPathSubs
+  oPathSubs = CreateUnoService(&quot;com.sun.star.util.PathSubstitution&quot;)
+  GetSystemDir() = oPathSubs.getSubstituteVariableValue(&quot;$(&quot; &amp; strPathName &amp; &quot;)&quot;)
+End Function
+
+&apos;----------------------------------------------------------------------------
+&apos; Auswahl eines Verzeichnisses
+&apos; sInPath ist das initiale Verzeichnis. wird keins angegeben, dann wird das
+&apos; Standard-Arbeitsverzeichnis verwendet
+Function SelectDirectory(Optional sInPath$) As String
+  Dim oDialog As Object
+  Dim oSFA As Object
+  Dim s As String
+
+  oDialog = CreateUnoService(&quot;com.sun.star.ui.dialogs.FolderPicker&quot;)
+  &apos;oDialog = CreateUnoService(&quot;com.sun.star.ui.dialogs.OfficeFolderPicker&quot;)
+  oSFA = createUnoService(&quot;com.sun.star.ucb.SimpleFileAccess&quot;)
+  
+  If IsMissing(sInPath) Then
+    oDialog.setDisplayDirectory(Elnet.FilesAndFolders.GetSystemDir(&quot;work&quot;))
+  ElseIf oSFA.Exists(sInPath) Then
+    oDialog.setDisplayDirectory(sInPath)
+  Else
+    s = &quot;Das Verzeichnis &apos;&quot; &amp; sInPath &amp; &quot;&apos; existiert nicht!&quot;
+    If MsgBox(s, 33, &quot;Fehler&quot;) = 2 Then Exit Function
+  End If
+  &apos;writedbginfo(odialog)
+  If oDialog.Execute() = 1 Then
+    SelectDirectory() = oDialog.getDirectory()
+  End If
+End Function
+
+&apos;----------------------------------------------------------------------------
+&apos; sInPath specifies the initial directory. If the initial directory
+&apos; is not specified, then the user&apos;s default work directory is used.
+&apos; The selected file is returned as a URL.
+Function SelectFile$(sFilters(), bOpen As Boolean, Optional iCurrentFilter%, optional sTitle, Optional sInPath$)
+  Dim oDialog As Object
+  Dim sPath As String
+  Dim oSFA As Object
+  Dim s As String
+  Dim i As Integer
+  Dim currentFilter as integer
+  
+  oDialog = CreateUnoService(&quot;com.sun.star.ui.dialogs.FilePicker&quot;)
+  oSFA = createUnoService(&quot;com.sun.star.ucb.SimpleFileAccess&quot;)
+
+  REM See the TemplateDescription constants to see what other 
+  REM values are supported.
+  If bOpen Then
+    i = com.sun.star.ui.dialogs.TemplateDescription.FILEOPEN_SIMPLE
+  Else
+    REM When choosing a file that already exists, you will be asked
+    REM if you want to overwrite the file.
+    i = com.sun.star.ui.dialogs.TemplateDescription.FILESAVE_SIMPLE
+  End If
+  oDialog.initialize(Array(i))
+  
+  
+  If IsMissing(sInPath) Then
+    oDialog.setDisplayDirectory(Elnet.FilesAndFolders.GetSystemDir(&quot;work&quot;))
+  ElseIf oSFA.Exists(sInPath) Then
+    oDialog.setDisplayDirectory(sInPath)
+  Else
+    s = &quot;Das Verzeichnis &apos;&quot; &amp; sInPath &amp; &quot;&apos; existiert nicht!&quot;
+    If MsgBox(s, 33, &quot;Fehler&quot;) = 2 Then Exit Function
+  End If
+
+  if not IsMissing(iCurrentFilter) then
+    currentFilter = iCurrentFilter * 2
+  else
+    currentFilter = 0
+  end if
+  
+  For i = LBound(sFilters()) To UBound(sFilters()) Step 2
+    Dim sFilterName$
+    Dim sFilterValue$
+    sFilterValue = sFilters(i + 1)
+    sFilterName = sFilters(i) &amp; &quot; (&quot; &amp; sFilterValue &amp; &quot;)&quot;
+    oDialog.appendFilter(sFilterName, sFilterValue)
+    if i = currentFilter then
+      oDialog.CurrentFilter = sFilterName
+    end if
+  Next
+  
+  if not IsMissing(sTitle) then
+    oDialog.DialogTitle = sTitle
+  end if
+  
+  If oDialog.Execute() = 1 Then
+    sPath = oDialog.Files(0)
+    SelectFile() = sPath
+  End If
+End Function
+
+&apos;----------------------------------------------------------------------------
+
+
+</script:module>
