@@ -7,4 +7,5 @@
  <library:element library:name="Standard"/>
  <library:element library:name="Templates"/>
  <library:element library:name="SerialNumber"/>
+ <library:element library:name="GiroCode"/>
 </library:library>

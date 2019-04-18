@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="GiroCode" script:language="StarBasic" script:moduleType="normal">REM  *****  BASIC  *****
+
+&apos; EntryPoint:
+&apos; CreateGiroCode
+
+&apos; Create a square svg image in Draw and name it &quot;qr_GiroCode&quot;
+
+option explicit
+Option VBASupport 1
+
+sub CreateGiroCode
+	dim bic$, iban$, accountOwner$, invoiceNumber$, amount$, apiUrl$
+	CreateDocProps bic, iban, accountOwner
+	invoiceNumber = findInvoiceNumber()
+	amount = findAmount()
+	
+	apiUrl = createApiUrl(bic, iban, accountOwner, invoiceNumber, amount)
+	msgbox apiUrl
+end sub
+
+
+&apos;-------------------------------------------
+sub CreateDocProps(byRef bic, byRef iban, byRef accountOwner)
+	bic = CreateDocProp(&quot;BIC&quot;)
+	iban = CreateDocProp(&quot;IBAN&quot;)
+	accountOwner = CreateDocProp(&quot;AccountOwner&quot;)
+end sub
+
+function CreateDocProp$(name$)
+	dim oInfo
+	oInfo = ThisComponent.getDocumentProperties().UserDefinedProperties
+	on error goto notfound
+	CreateDocProp = oInfo.getPropertyValue(name)
+	exit function
+notfound:
+	oInfo.addProperty(name, 0, &quot;&quot;)  
+	CreateDocProp = &quot;&quot;
+end function
+
+&apos;-------------------------------------------
+function findInvoiceNumber$()
+	findInvoiceNumber = &quot;R12345XYZ7890&quot;
+end function
+
+
+&apos;-------------------------------------------
+function findAmount$()
+	findAmount = &quot;88,42&quot;
+end function
+
+
+&apos;-------------------------------------------
+function createApiUrl$(bic$, iban$, accountOwner$, invoiceNumber$, amount$)
+	createApiUrl = bic &amp; vbLf &amp; iban &amp; vbLf &amp; accountOwner &amp; vbLf &amp; invoiceNumber &amp; vbLf &amp; amount
+end function
+
+</script:module>
