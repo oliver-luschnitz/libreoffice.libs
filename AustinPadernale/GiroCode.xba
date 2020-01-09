@@ -10,50 +10,35 @@
 option explicit
 Option VBASupport 1
 
-sub CreateGiroCode
-	dim bic$, iban$, accountOwner$, invoiceNumber$, amount$, apiUrl$
-	CreateDocProps bic, iban, accountOwner
-	invoiceNumber = findInvoiceNumber()
-	amount = findAmount()
+sub CreateGiroCode(BIC$, OWNER$, IBAN$, VALUE$, SUBJECT$)
+	dim giroCodeData$, URL$, shape
+	giroCodeData = &quot;BCD&quot; &amp; vbLf &amp; _
+	               &quot;002&quot; &amp; vbLf &amp; _
+	               &quot;2&quot; &amp; vbLf &amp; _
+	               &quot;SCT&quot; &amp; vbLf &amp; _
+	               BIC &amp; vbLf &amp; _
+	               OWNER &amp; vbLf &amp; _
+	               IBAN &amp; vbLf &amp; _
+	               VALUE &amp; vbLf &amp; _
+	               &quot;&quot; &amp; vbLf &amp; _
+	               &quot;&quot; &amp; vbLf &amp; _
+	               SUBJECT &amp; vbLf &amp; _
+	               &quot;&quot;
 	
-	apiUrl = createApiUrl(bic, iban, accountOwner, invoiceNumber, amount)
-	msgbox apiUrl
+	URL = createApiUrl(giroCodeData)
+	shape = findShape(&quot;giroCode&quot;)
+	setEmbeddedImageFromUrl shape, URL
 end sub
 
 
 &apos;-------------------------------------------
-sub CreateDocProps(byRef bic, byRef iban, byRef accountOwner)
-	bic = CreateDocProp(&quot;BIC&quot;)
-	iban = CreateDocProp(&quot;IBAN&quot;)
-	accountOwner = CreateDocProp(&quot;AccountOwner&quot;)
-end sub
-
-function CreateDocProp$(name$)
-	dim oInfo
-	oInfo = ThisComponent.getDocumentProperties().UserDefinedProperties
-	on error goto notfound
-	CreateDocProp = oInfo.getPropertyValue(name)
-	exit function
-notfound:
-	oInfo.addProperty(name, 0, &quot;&quot;)  
-	CreateDocProp = &quot;&quot;
-end function
-
-&apos;-------------------------------------------
-function findInvoiceNumber$()
-	findInvoiceNumber = &quot;R12345XYZ7890&quot;
-end function
-
-
-&apos;-------------------------------------------
-function findAmount$()
-	findAmount = &quot;88,42&quot;
-end function
-
-
-&apos;-------------------------------------------
-function createApiUrl$(bic$, iban$, accountOwner$, invoiceNumber$, amount$)
-	createApiUrl = bic &amp; vbLf &amp; iban &amp; vbLf &amp; accountOwner &amp; vbLf &amp; invoiceNumber &amp; vbLf &amp; amount
+function createApiUrl$(data$)
+	dim baseUrl$, size%, qrData$
+	baseUrl = &quot;http://api.qrserver.com/v1/create-qr-code/?ecc=M&quot;
+	size = 200
+	qrData = encodeUrl(data)
+	
+	createApiUrl = baseUrl &amp; &quot;&amp;size=&quot; &amp; Cstr(size) &amp; &quot;x&quot; &amp; Cstr(size) &amp; &quot;&amp;data=&quot; &amp; qrData
 end function
 
 </script:module>

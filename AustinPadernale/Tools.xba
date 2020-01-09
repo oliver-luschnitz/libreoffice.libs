@@ -59,4 +59,49 @@ end function
 
 &apos;----------------------------------------------------------------------------
 
+function encodeUrl$(src$)
+	dim result$
+	result = replace(src, &quot; &quot;, &quot;%20&quot;)
+	result = replace(result, chr(10), &quot;%0A&quot;)
+	encodeUrl = result
+end function
+
+&apos;----------------------------------------------------------------------------
+
+function findShape(shapeName$)
+  dim shape, dpa, dpi, dp, i, o
+  shape = null
+  dpa = GetDrawPages()
+  for dpi = 0 to UBound(dpa)
+  	dp = dpa(dpi)
+    for i = 0 to dp.Count - 1
+	  on err goto nextI
+      o = dpa(dpi).getByIndex(i)
+      if o.Name = shapeName then
+        shape = o
+        exit for
+      end if
+nextI:
+    next i
+    if not IsNull(shape) then exit for
+  next dpi
+  findShape = shape
+end function
+
+sub setEmbeddedImageFromUrl(shape, url$)
+  dim props(0) As New com.sun.star.beans.PropertyValue, gp As Object, p as Object
+  gp = createUnoservice(&quot;com.sun.star.graphic.GraphicProvider&quot;)
+  props(0).Name = &quot;URL&quot;
+  props(0).Value = url
+  p = gp.queryGraphic(props())
+  if not IsNull(p) then
+    shape.GraphicUrl = &quot;&quot;
+    shape.Graphic = p
+    shape.Transparency = 0
+  else
+    shape.Transparency = 100
+  end if
+
+end sub
+
 </script:module>
