@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="GiroCode" script:language="StarBasic" script:moduleType="normal">REM  *****  BASIC  *****
+
+&apos; EntryPoint:
+&apos; CreateGiroCode
+
+&apos; Create a square svg image in Draw and name it &quot;qr_GiroCode&quot;
+
+option explicit
+Option VBASupport 1
+
+sub CreateGiroCode(BIC$, OWNER$, IBAN$, VALUE$, SUBJECT$)
+	dim giroCodeData$, URL$, shape
+	giroCodeData = &quot;BCD&quot; &amp; vbLf &amp; _
+	               &quot;002&quot; &amp; vbLf &amp; _
+	               &quot;2&quot; &amp; vbLf &amp; _
+	               &quot;SCT&quot; &amp; vbLf &amp; _
+	               BIC &amp; vbLf &amp; _
+	               OWNER &amp; vbLf &amp; _
+	               IBAN &amp; vbLf &amp; _
+	               VALUE &amp; vbLf &amp; _
+	               &quot;&quot; &amp; vbLf &amp; _
+	               &quot;&quot; &amp; vbLf &amp; _
+	               SUBJECT &amp; vbLf &amp; _
+	               &quot;&quot;
+	
+	URL = createApiUrl(giroCodeData)
+	shape = findShape(&quot;giroCode&quot;)
+	setEmbeddedImageFromUrl shape, URL
+end sub
+
+
+&apos;-------------------------------------------
+function createApiUrl$(data$)
+	dim baseUrl$, size%, qrData$
+	baseUrl = &quot;http://api.qrserver.com/v1/create-qr-code/?ecc=M&quot;
+	size = 200
+	qrData = encodeUrl(data)
+	
+	createApiUrl = baseUrl &amp; &quot;&amp;size=&quot; &amp; Cstr(size) &amp; &quot;x&quot; &amp; Cstr(size) &amp; &quot;&amp;data=&quot; &amp; qrData
+end function
+
+</script:module>
