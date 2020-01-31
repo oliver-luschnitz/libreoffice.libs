@@ -10,7 +10,7 @@
 option explicit
 Option VBASupport 1
 
-sub CreateGiroCode(BIC$, OWNER$, IBAN$, VALUE$, SUBJECT$)
+function CreateGiroCode$(BIC$, OWNER$, IBAN$, VALUE$, SUBJECT$)
 	dim giroCodeData$, URL$, shape
 	giroCodeData = &quot;BCD&quot; &amp; vbLf &amp; _
 	               &quot;002&quot; &amp; vbLf &amp; _
@@ -28,7 +28,8 @@ sub CreateGiroCode(BIC$, OWNER$, IBAN$, VALUE$, SUBJECT$)
 	URL = createApiUrl(giroCodeData)
 	shape = findShape(&quot;giroCode&quot;)
 	setEmbeddedImageFromUrl shape, URL
-end sub
+	CreateGiroCode = giroCodeData
+end function
 
 
 &apos;-------------------------------------------

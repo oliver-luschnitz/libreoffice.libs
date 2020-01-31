@@ -52,4 +52,16 @@ Sub Document_New_Ask
   Document.SetDocumentTitle(newtitle)
 End Sub
 
+&apos;----------------------------------------------------------------------------
+&apos; Liefert eine Zelle aus einer Writer-Tabelle
+function getTextTableCell(oDoc, tableName$, cellName$)
+	getTextTableCell = oDoc.getTextTables().getByName(tableName).getCellByName(cellName)
+end function
+
+&apos;----------------------------------------------------------------------------
+&apos; Liefert eine Tabelle aus einer Writer-Tabelle
+function getTextTable(oDoc, tableName$)
+	getTextTable = oDoc.getTextTables().getByName(tableName)
+end function
+
 </script:module>

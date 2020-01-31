@@ -49,7 +49,7 @@ End Function
 &apos; string strFormat eingefügt. Platzhalter ist der index im Array, der von
 &apos; geschweiften Klammern umschlossen ist. (Ähnlich zur string.Format() in C#
 function StringFormat$(strFormat$, aValues())
-  dim i, result$
+  dim i%, result$
   result = strFormat
   for i = LBound(aValues) to UBound(aValues)
     result = Replace(result, &quot;{&quot; &amp; i &amp; &quot;}&quot;, aValues(i))
