@@ -74,9 +74,10 @@ function findShape(shapeName$)
   dpa = GetDrawPages()
   for dpi = 0 to UBound(dpa)
   	dp = dpa(dpi)
+  	&apos;o = dp.getByName(shapeName)
     for i = 0 to dp.Count - 1
 	  on err goto nextI
-      o = dpa(dpi).getByIndex(i)
+      o = dp.getByIndex(i)
       if o.Name = shapeName then
         shape = o
         exit for
